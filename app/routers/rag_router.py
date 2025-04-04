@@ -17,6 +17,6 @@ async def askQuestion(
     request : QuestionRequest = ...,
 ):
     llm = getLLMService(provider, settings)
-    rag = RAGService(llm)
+    rag = RAGService(llm, vector_db_base=settings.vector_db_base)
     result = rag.query(request.question)
     return result

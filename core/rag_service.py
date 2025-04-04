@@ -1,3 +1,4 @@
+import os
 from uuid import uuid4 
 import traceback
 
@@ -6,9 +7,16 @@ from openai import OpenAIError
 from core.llm_service import LLMService
 
 class RAGService:
-    def __init__(self, llm: LLMService):
+    def __init__(self, llm: LLMService, vector_db_base : str = "./chromaDB"):
         self.llm = llm
-        self.client = chromadb.Client()
+        
+        # provider 별 vector db 생성
+        self.vector_db_path = os.path.join(vector_db_base, llm.provider)
+        os.makedirs(self.vector_db_path, exist_ok = True)
+        
+        self.client = chromadb.Client(
+            path = self.vector_db_path
+        )
         self.collection = self.client.get_or_create_collection("rag_knowledge")
     
     def query(self, question: str, threshold: float = 0.8):
