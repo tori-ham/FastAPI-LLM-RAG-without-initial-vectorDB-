@@ -37,8 +37,9 @@ class RAGService:
                     "source" : "db",
                     "answer" : results["documents"][0][0]
                 }
-        except OpenAIError as e:
+        except Exception as e:
             traceback.print_exc();
             return {
-                "error" : str(e)
+                "error" : str(e),
+                "provider" : self.llm.provider
             }
