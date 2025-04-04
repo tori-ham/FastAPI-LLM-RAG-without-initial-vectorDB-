@@ -5,10 +5,12 @@ from core.llm_service import LLMService
 from app.dependencies import getLLMService
 from app.config import AppSettings
 from app.dependencies import getSettings
+from core.mcp_service import ModelContextProvider
 
 from models.QuestionRequest import QuestionRequest
 
 router = APIRouter()
+mcpService = ModelContextProvider()
 
 @router.post("/ask/{provider}")
 async def askQuestion(
@@ -17,6 +19,12 @@ async def askQuestion(
     request : QuestionRequest = ...,
 ):
     llm = getLLMService(provider, settings)
-    rag = RAGService(llm, vector_db_base=settings.vector_db_base)
-    result = rag.query(request.question)
+    rag = RAGService(
+        llm, 
+        vector_db_base=settings.vector_db_base,
+        context_provider = mcpService
+    )
+    result = rag.query(
+        request.question,
+        user_id = request.userId)
     return result
