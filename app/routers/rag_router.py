@@ -1,18 +1,22 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path
 # from pydantic import BaseModel
 from core.rag_service import RAGService
 from core.llm_service import LLMService
 from app.dependencies import getLLMService
+from app.config import AppSettings
+from app.dependencies import getSettings
 
 from models.QuestionRequest import QuestionRequest
 
 router = APIRouter()
 
-@router.post("/ask")
+@router.post("/ask/{provider}")
 async def askQuestion(
-    request : QuestionRequest,
-    llm : LLMService = Depends(getLLMService)
+    settings : AppSettings = Depends(getSettings),
+    provider : str = Path(..., regex="^(openai|hf|cohere|groq)$"),
+    request : QuestionRequest = ...,
 ):
+    llm = getLLMService(provider, settings)
     rag = RAGService(llm)
     result = rag.query(request.question)
     return result
