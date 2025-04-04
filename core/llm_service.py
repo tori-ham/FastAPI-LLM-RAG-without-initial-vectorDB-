@@ -1,10 +1,12 @@
-import openai
+# import openai
+from openai import OpenAI
 
 class LLMService:
     def __init__(self, apiKey : str):
-        openai.apiKey = apiKey
+        # openai.apiKey = apiKey
+        self.llmClient = OpenAI(api_key = apiKey)
     def getCompletion(self, prompt : str) -> str:
-        openai_response = openai.Completion.create(
+        openai_response = self.llmClient.Completion.create(
             engine = "",
             prompt = prompt,
             max_tokens = 500,
@@ -12,7 +14,7 @@ class LLMService:
         )
         return openai_response.choices[0].text.strip()
     def getAnswer(self, prompt : str) -> str:
-        response = openai.ChatCompletion.create(
+        response = self.llmClient.ChatCompletion.create(
             model = "gpt-3.5-turbo",
             messages=[
                 {
@@ -24,7 +26,7 @@ class LLMService:
         )
         return response["choices"][0]["message"]["content"].strip()
     def getEmbedding(self, text : str) -> list:
-        response = openai.Embedding.create(
+        response = self.llmClient.Embedding.create(
             input = text,
             model = "text-embedding-ada-002"
         )
