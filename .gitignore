@@ -1,0 +1,6 @@
+# 환경변수 제외
+.env
+app/config.py
+
+ai_env/
+ai_env/*
