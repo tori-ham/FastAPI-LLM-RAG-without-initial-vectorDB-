@@ -3,7 +3,6 @@ from openai import OpenAI
 
 class LLMService:
     def __init__(self, apiKey : str):
-        # openai.apiKey = apiKey
         self.llmClient = OpenAI(api_key = apiKey)
     def getCompletion(self, prompt : str) -> str:
         openai_response = self.llmClient.Completion.create(
