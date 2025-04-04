@@ -3,6 +3,7 @@ from uuid import uuid4
 import traceback
 
 import chromadb 
+from chromadb.config import Settings
 from openai import OpenAIError 
 from core.llm_service import LLMService
 
@@ -15,7 +16,9 @@ class RAGService:
         os.makedirs(self.vector_db_path, exist_ok = True)
         
         self.client = chromadb.Client(
-            path = self.vector_db_path
+            Settings(
+                persist_directory = self.vector_db_path
+            )
         )
         self.collection = self.client.get_or_create_collection("rag_knowledge")
     
@@ -27,7 +30,12 @@ class RAGService:
                 n_results = 1
             )
             
-            if not results["documents"] or results["distances"][0][0] > threshold:
+            print("results", results)
+            
+            documents = results.get("documents", [])
+            distances = results.get("distances", [])
+            has_docs = documents and len(documents[0]) > 0
+            if not has_docs or distances[0][0] > threshold:
                 answer = self.llm.getAnswer(question)
                 full_text = f"Q: {question}\nA: {answer}"
                 answer_embedding = self.llm.getEmbedding(full_text)
