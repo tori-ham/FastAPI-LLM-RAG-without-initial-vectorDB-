@@ -23,11 +23,12 @@ async def askQuestion(
     memory = RedisConversationMemory(request.userId)
     rag = RAGService(
         llm, 
-        userId = request.uesrId,
+        userId = request.userId,
         vector_db_base=settings.vector_db_base,
-        context_provider = mcpService,
+        context_provider = memory,
         memory = memory
     )
+    rag.summarizeNStoreHistory()
     result = rag.query(
         request.question,
         user_id = request.userId)
