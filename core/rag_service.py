@@ -31,6 +31,23 @@ class RAGService:
             )
         )
         self.collection = self.client.get_or_create_collection("rag_knowledge")
+        
+    def summarizeNStoreHistory(self):
+        history = self.memory.getAllHistory()
+        if not history:
+            return
+        history_text = "\n".join(history)
+        summary_prompt = f"다음 대화 내용을 요약해줘:\n\n{history_text}"
+        summary = self.llm.getAnswer(summary_prompt)
+        
+        embedding = self.llm.getEmbedding(summary)
+        self.collection.add(
+            documents=[summary],
+            embeddings=[embedding],
+            ids=[str(uuid4())]
+        )
+        self.memory.saveSummary(summary)
+        self.memory.clear()
     
     def query(self, question: str, user_id : str, threshold: float = 0.8):
         try:
