@@ -15,11 +15,13 @@ class RAGService:
         llm: LLMService, 
         userId : str,
         vectorDBBase : str = "./chromaDB",
-        memory : RedisConversationMemory = None
+        memory : RedisConversationMemory = None,
+        summaryTriggerCount : int = 10
     ):
         self.llm = llm
         self.user_id = userId
         self.memory = memory or RedisConversationMemory(user_id)
+        self.summary_trigger_count = summaryTriggerCount
         
         # provider 별 vector db 생성
         self.vector_db_path = os.path.join(vectorDBBase, llm.provider)
@@ -34,7 +36,7 @@ class RAGService:
         
     def summarizeNStoreHistory(self):
         history = self.memory.getAllHistory()
-        if not history:
+        if not history or len(history) < self.summary_trigger_count:
             return
         history_text = "\n".join(history)
         summary_prompt = f"다음 대화 내용을 요약해줘:\n\n{history_text}"
