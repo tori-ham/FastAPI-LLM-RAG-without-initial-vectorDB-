@@ -34,22 +34,32 @@ class RAGService:
     
     def query(self, question: str, user_id : str, threshold: float = 0.8):
         try:
-            context = self.memory.loadMemoryVariables().get("history", "")
-            prompt = f"{context}\n\nUser: {question}".strip()
+            # Short Term Context
+            short_term = self.memory.loadMemoryVariables().get("history", "")
             
+            # Long Term Context
             query_embedding = self.llm.getEmbedding(question)
             results = self.collection.query(
                 query_embeddings = [query_embedding],
-                n_results = 1
+                n_results = 3
             )
             
-            print("results", results)
+            long_term = "\n".join( doc[0] for doc in results.get("documents", []) if doc )
+            use_llm = not results.get("documents") or len(results["documents"][0]) == 0 or results["distances"][0][0] > threshold
             
-            documents = results.get("documents", [])
-            distances = results.get("distances", [])
-            has_docs = documents and len(documents[0]) > 0
-            if not has_docs or distances[0][0] > threshold:
-                answer = self.llm.getAnswer(prompt)
+            # Hybrid Context
+            context = "".join(
+                [
+                    "# 최근 대화\n" + short_term if short_term else "",
+                    "\n# 관련 기록\n" + long_term if long_term else "",
+                ]
+            ).strip()
+            
+            full_prompt = f"{context}\n\nUser: {question}" if context else question
+            
+            # LLM
+            if use_llm:
+                answer = self.llm.getAnswer(full_prompt)
                 full_text = f"Q: {question}\nA: {answer}"
                 answer_embedding = self.llm.getEmbedding(full_text)
                 self.collection.add(
