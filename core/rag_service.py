@@ -7,19 +7,22 @@ from chromadb.config import Settings
 from openai import OpenAIError 
 from core.llm_service import LLMService
 from .mcp_service import ModelContextProvider
+from core.memory_adapter import RedisConversationMemory
 
 class RAGService:
     def __init__(
         self, 
         llm: LLMService, 
-        vector_db_base : str = "./chromaDB",
-        context_provider = None
+        userId : str,
+        vectorDBBase : str = "./chromaDB",
+        memory : RedisConversationMemory = None
     ):
         self.llm = llm
-        self.context_provider = context_provider
+        self.user_id = userId
+        self.memory = memory or RedisConversationMemory(user_id)
         
         # provider 별 vector db 생성
-        self.vector_db_path = os.path.join(vector_db_base, llm.provider)
+        self.vector_db_path = os.path.join(vectorDBBase, llm.provider)
         os.makedirs(self.vector_db_path, exist_ok = True)
         
         self.client = chromadb.Client(
@@ -31,10 +34,8 @@ class RAGService:
     
     def query(self, question: str, user_id : str, threshold: float = 0.8):
         try:
-            context = ""
-            if self.context_provider:
-                context = self.context_provider.getContext(user_id)
-            full_prompt = f"{context}\n\nUser: {question}".strip()
+            context = self.memory.loadMemoryVariables().get("history", "")
+            prompt = f"{context}\n\nUser: {question}".strip()
             
             query_embedding = self.llm.getEmbedding(question)
             results = self.collection.query(
@@ -48,7 +49,7 @@ class RAGService:
             distances = results.get("distances", [])
             has_docs = documents and len(documents[0]) > 0
             if not has_docs or distances[0][0] > threshold:
-                answer = self.llm.getAnswer(question)
+                answer = self.llm.getAnswer(prompt)
                 full_text = f"Q: {question}\nA: {answer}"
                 answer_embedding = self.llm.getEmbedding(full_text)
                 self.collection.add(
@@ -57,11 +58,10 @@ class RAGService:
                     ids = [str(uuid4())]
                 )
                 
-                if self.context_provider:
-                    self.context_provider.addContext(user_id, question, answer)
+                self.memory.saveContext( { "question" : question }, { "answer" : answer } )
                 
                 return {
-                    "source" : "llm",
+                    "source" : self.llm.provider,
                     "answer" : answer
                 }
             else:
